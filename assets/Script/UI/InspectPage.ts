@@ -10,9 +10,11 @@ import {
     getBatchDowngradeEstimate,
     getBatchUpgradeEstimate,
 } from "../CoreGame/Logic/BatchMode";
-import { getInput, getOutput, InputBufferTypes, InputCapacityOverrideTypes } from "../CoreGame/Logic/Entity";
+import { InputBufferTypes, InputCapacityOverrideTypes, getInput, getOutput } from "../CoreGame/Logic/Entity";
 import {
     BLD,
+    NoEfficiency,
+    RES,
     buildingCanInput,
     buildingCanOutput,
     buildingValue,
@@ -30,11 +32,11 @@ import {
     profitMargin,
     refundCash,
     refundForSellingBuilding,
-    RES,
     trySpendCash,
 } from "../CoreGame/Logic/Logic";
 import { getOfflineProductionSecond, qualifyForOfflineProduction } from "../CoreGame/Logic/OfflineProduction";
 import {
+    NoAdjacentBonus,
     canApplyProductionMultiplier,
     getAdjacentBonus,
     getAdjacentCount,
@@ -47,20 +49,30 @@ import {
     getSwissMultiplier,
     getTileModifier,
     getUpgradeMultiplier,
-    NoAdjacentBonus,
 } from "../CoreGame/Logic/Production";
 import { isPolicyActive } from "../CoreGame/Logic/SelfContained";
 import { allAffectingNews } from "../CoreGame/MarketNews";
 import { Resources } from "../CoreGame/ResourceDefinitions";
 import { getTips, nextTips } from "../CoreGame/Tips";
-import { D, DLC, G, hasDLC, T } from "../General/GameData";
-import { formatHMS, formatPercent, getOrSet, ifTrue, keysOf, nf, numberSign, SECOND, sizeOf } from "../General/Helper";
+import { D, DLC, G, T, hasDLC } from "../General/GameData";
+import {
+    SECOND,
+    formatHMS,
+    formatPercent,
+    getOrSet,
+    ifTrue,
+    keysOf,
+    nf,
+    numberSign,
+    safeGet,
+    sizeOf,
+} from "../General/Helper";
 import { t } from "../General/i18n";
 import { BuildingInputPanel } from "./BuildingInputPanel";
 import { CrazyGameAdBanner } from "./CrazyGameAdBanner";
 import { MoveBuildingPanel } from "./MoveBuildingPanel";
 import { shortcut } from "./Shortcut";
-import { iconB, InputOverrideFallbackOptions, leftOrRight, uiBoxToggle, uiHeaderRoute } from "./UIHelper";
+import { InputOverrideFallbackOptions, iconB, leftOrRight, uiBoxToggle, uiHeaderRoute } from "./UIHelper";
 import { hideAlert, routeTo, showAlert, showToast } from "./UISystem";
 
 let showAllModifiers = false;
@@ -232,6 +244,11 @@ export function InspectPage(): m.Comp<{ xy: string }> {
                             },
                             [m("div", t("Level")), m("div", entity.level)]
                         ),
+                        m(".hr"),
+                        m(".two-col", [
+                            m("div", t("BuildingCount")),
+                            m("div", safeGet(T.buildingCount, entity.type, 0)),
+                        ]),
                         ifTrue(!building.hideUpgradeMultiplier, () => [
                             m(".hr"),
                             m(".two-col", [
@@ -481,6 +498,20 @@ export function InspectPage(): m.Comp<{ xy: string }> {
                         renderOutput(),
                     ]),
                     building.panel ? m(building.panel, { entity: entity }) : null,
+                    ifTrue(NoEfficiency[entity.type], () => [
+                        m(".box", [
+                            m(
+                                ".banner.box.text-m",
+                                t("NoEfficiencyDesc") +
+                                    " " +
+                                    ifTrue(
+                                        hasDLC(DLC[0]),
+                                        () => t("AdjacentBonusOnlyOutput") + ", " + t("TileModifierOutputOnly")
+                                    ) +
+                                    ifTrue(hasDLC(DLC[1]), () => ", " + t("IndustryZoneProductivityBoost"))
+                            ),
+                        ]),
+                    ]),
                     m(".box", [
                         m(".two-col.text-s.uppercase", [
                             m("div", t("BatchMode")),
